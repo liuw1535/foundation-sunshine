@@ -3,6 +3,7 @@
  * @brief Definitions for the main entry point for Sunshine.
  */
 // standard includes
+#include <atomic>
 #include <codecvt>
 #include <csignal>
 #include <fstream>
@@ -31,6 +32,19 @@
 extern "C" {
 #include "rswrapper.h"
 }
+
+#ifdef _WIN32
+  #ifndef WIN32_LEAN_AND_MEAN
+    #define WIN32_LEAN_AND_MEAN
+  #endif
+  #include <windows.h>
+
+namespace {
+  // Captures the value main() ends up returning so the atexit terminator can use it.
+  // Defaults to 0 (success) for the common case where main returns lifetime::desired_exit_code.
+  std::atomic<int> g_final_exit_code { 0 };
+}
+#endif
 
 using namespace std::literals;
 
@@ -123,6 +137,15 @@ main(int argc, char *argv[]) {
   task_pool_util::TaskPool::task_id_t force_shutdown = nullptr;
 
 #ifdef _WIN32
+  // Note: this only fires on a normal `return` from main. If the program
+  // crashes mid-run (uncaught exception, AV, abort/terminate), atexit is
+  // not invoked, so the service supervisor still observes a non-zero exit
+  // code and can restart Sunshine as usual.
+  std::atexit([]() {
+    TerminateProcess(GetCurrentProcess(),
+                     static_cast<UINT>(g_final_exit_code.load(std::memory_order_acquire)));
+  });
+
   // Avoid searching the PATH in case a user has configured their system insecurely
   // by placing a user-writable directory in the system-wide PATH variable.
   SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
@@ -451,5 +474,12 @@ main(int argc, char *argv[]) {
   }
 #endif
 
+#ifdef _WIN32
+  // Hand the chosen exit code over to the atexit terminator so it can pass it
+  // straight to TerminateProcess. Without this the terminator would always
+  // exit with 0 even when lifetime::desired_exit_code was set non-zero by a
+  // failure path that still chose to return cleanly from main.
+  g_final_exit_code.store(lifetime::desired_exit_code, std::memory_order_release);
+#endif
   return lifetime::desired_exit_code;
 }
