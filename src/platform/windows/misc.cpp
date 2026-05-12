@@ -1178,7 +1178,7 @@ namespace platf {
     auto working_dir = boost::filesystem::path();
     std::error_code ec;
 
-    auto child = run_command(true, false, cmd_path + " " + cmd_args, working_dir, _env, nullptr, ec, nullptr);
+    auto child = run_command(false, false, cmd_path + " " + cmd_args, working_dir, _env, nullptr, ec, nullptr);
     if (ec) {
       BOOST_LOG(warning) << "Couldn't open url ["sv << url << "]: System: "sv << ec.message();
     }
