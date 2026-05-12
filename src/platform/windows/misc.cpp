@@ -1171,11 +1171,14 @@ namespace platf {
    */
   void
   open_url(const std::string &url) {
+    const std::string cmd_path = "assets/gui/sunshine-gui.exe";
+    const std::string cmd_args = "--url=" + url;
+
     boost::process::v1::environment _env = boost::this_process::environment();
     auto working_dir = boost::filesystem::path();
     std::error_code ec;
 
-    auto child = run_command(false, true, "assets/gui/sunshine-gui.exe --url=" + url, working_dir, _env, nullptr, ec, nullptr);
+    auto child = run_command(true, false, cmd_path + " " + cmd_args, working_dir, _env, nullptr, ec, nullptr);
     if (ec) {
       BOOST_LOG(warning) << "Couldn't open url ["sv << url << "]: System: "sv << ec.message();
     }
