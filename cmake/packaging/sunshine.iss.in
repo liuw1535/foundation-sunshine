@@ -584,9 +584,12 @@ end;
 
 procedure VerifyServiceInstalled();
 var
-  ExpectedPath, ImagePath, Lower: String;
+  ExpectedPath, ImagePath, Lower, Detail: String;
+  Tries: Integer;
+  Found: Boolean;
 begin
   ExpectedPath := ExpandConstant('{app}\tools\sunshinesvc.exe');
+  Lower := Lowercase(ExpectedPath);
 
   // Read the service binary path directly from the registry instead of
   // parsing `sc qc` output. `sc.exe` localizes its column labels
@@ -598,15 +601,31 @@ begin
   // ImagePath is REG_EXPAND_SZ and may be wrapped in quotes when the path
   // contains spaces (it always does under "Program Files"); substring match
   // tolerates both forms, plus any future appended arguments.
-  if RegQueryStringValue(HKLM64, 'SYSTEM\CurrentControlSet\Services\SunshineService',
-                         'ImagePath', ImagePath) then
+  //
+  // Retry a few times: SCM can take a moment to publish ImagePath after a
+  // successful `sc create`, especially when the service was just deleted
+  // out of "marked for deletion" state inside install-service.bat.
+  ImagePath := '';
+  for Tries := 1 to 5 do
   begin
-    Lower := Lowercase(ExpectedPath);
-    if Pos(Lower, Lowercase(ImagePath)) > 0 then
+    Found := RegQueryStringValue(HKLM64, 'SYSTEM\CurrentControlSet\Services\SunshineService',
+                                 'ImagePath', ImagePath);
+    if Found and (Pos(Lower, Lowercase(ImagePath)) > 0) then
       Exit;  // happy path
+    Sleep(500);
   end;
 
-  RaiseException(CustomMessage('MsgServiceInstallFailed'));
+  // Build a detailed diagnostic so support reports include the actual
+  // mismatch rather than just the generic "could not install or verify"
+  // string. This makes it obvious whether the registry is empty (sc create
+  // never ran / was blocked) vs. pointing at an old install directory
+  // (stale SCM record from a previous install on a different drive).
+  if not Found then
+    Detail := 'ImagePath: <missing>'
+  else
+    Detail := 'ImagePath: ' + ImagePath;
+  Detail := Detail + #13#10 + 'Expected: ' + ExpectedPath;
+  RaiseException(CustomMessage('MsgServiceInstallFailed') + #13#10 + #13#10 + Detail);
 end;
 
 // Initialization: handle old NSIS upgrade
