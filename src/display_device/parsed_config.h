@@ -1,5 +1,8 @@
 #pragma once
 
+// standard includes
+#include <string>
+
 // local includes
 #include "display_device.h"
 
@@ -162,6 +165,32 @@ namespace display_device {
     boost::optional<bool> change_hdr_state; /**< Parsed HDR state value we need to switch to (true == ON, false == OFF). Empty optional if no action is required. */
     boost::optional<bool> use_vdd; /**< Parsed VDD state value we need to switch to (true == ON, false == OFF). */
   };
+
+  /**
+   * @brief Display device requested by either the global config or the current client session.
+   */
+  struct display_request_t {
+    enum class source_e {
+      config,
+      client
+    };
+
+    std::string device_id;
+    source_e source;
+    bool use_vdd;
+
+    bool
+    is_client_physical_display() const;
+
+    bool
+    allows_vdd_fallback() const;
+
+    bool
+    requires_vdd(bool requested_device_exists, bool is_vdd_device) const;
+  };
+
+  display_request_t
+  resolve_display_request(const config::video_t &config, const rtsp_stream::launch_session_t &session);
 
   /**
    * @brief Parse the user configuration and the session information.

@@ -5,6 +5,7 @@
 #include <thread>
 
 // local includes
+#include "parsed_config.h"
 #include "session.h"
 #include "src/confighttp.h"
 #include "src/globals.h"
@@ -341,13 +342,7 @@ namespace display_device {
     boost::optional<active_topology_t> pre_saved_initial_topology;
     
     // 检查是否会使用VDD
-    std::string device_id_to_use = config.output_name;
-    if (auto it = session.env.find("SUNSHINE_CLIENT_DISPLAY_NAME"); it != session.env.end()) {
-      const std::string client_display_name = it->to_string();
-      if (!client_display_name.empty()) {
-        device_id_to_use = client_display_name;
-      }
-    }
+    const auto display_request = resolve_display_request(config, session);
     
     // 检查VDD是否已存在
     const auto existing_vdd_id = display_device::find_device_by_friendlyname(ZAKO_NAME);
@@ -355,10 +350,11 @@ namespace display_device {
     
     // 如果会使用VDD且VDD当前不存在，在创建前保存拓扑
     // 如果VDD已存在，说明拓扑已被破坏，不应该保存当前拓扑
-    const auto requested_device_id = display_device::find_one_of_the_available_devices(device_id_to_use);
-    const bool is_vdd_device = (display_device::get_display_friendly_name(device_id_to_use) == ZAKO_NAME);
+    const auto requested_device_id = display_device::find_one_of_the_available_devices(display_request.device_id);
+    const bool requested_device_exists = !requested_device_id.empty();
+    const bool is_vdd_device = (display_device::get_display_friendly_name(display_request.device_id) == ZAKO_NAME);
     
-    const bool needs_vdd = session.use_vdd || requested_device_id.empty() || is_vdd_device;
+    const bool needs_vdd = display_request.requires_vdd(requested_device_exists, is_vdd_device);
     
     // - 如果不需要 VDD：跳过 VDD 相关逻辑
     // - 如果不是 SYSTEM 权限且处于 RDP 中：使用 RDP 虚拟显示器，不创建 VDD
