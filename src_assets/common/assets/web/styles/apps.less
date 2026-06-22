@@ -227,6 +227,10 @@
 
 .view-toggle-btn {
   .btn-rounded();
+  flex: 0 0 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
   background: transparent;
   color: rgba(255, 255, 255, 0.6);
   font-size: var(--font-size-md);
@@ -259,6 +263,10 @@
 
 .cute-btn {
   .btn-rounded(48px);
+  flex: 0 0 48px;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0;
   color: #fff;
   font-size: var(--font-size-lg);
   .transition-bounce();
@@ -486,11 +494,17 @@
     position: absolute;
     top: 10px;
     right: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
     color: rgba(255, 255, 255, 0.4);
-    cursor: move;
+    cursor: grab;
     font-size: var(--font-size-lg);
-    padding: 5px;
-    border-radius: 5px;
+    padding: 0;
+    border-radius: 10px;
+    touch-action: none;
     .transition-default();
     z-index: 10;
 
@@ -600,6 +614,7 @@
   position: relative;
   box-shadow: var(--box-shadow-sm);
   animation: fadeIn 0.5s ease;
+  touch-action: pan-y;
 
   &:hover {
     transform: translateY(-5px);
@@ -1155,7 +1170,18 @@
   .cute-btn {
     width: 44px;
     height: 44px;
+    flex-basis: 44px;
+    min-width: 44px;
+    min-height: 44px;
     font-size: 1.1rem;
+    animation: none;
+  }
+
+  .app-actions .btn {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
   }
 
   .page-title {
@@ -1222,13 +1248,20 @@
   }
 
   .cute-btn {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+    min-width: 44px;
+    min-height: 44px;
     font-size: var(--font-size-md);
   }
 
   .action-buttons {
     gap: 8px;
+
+    > .cute-btn {
+      flex: 0 0 44px;
+    }
   }
 
   .app-list-item-inner {
@@ -1256,8 +1289,10 @@
   }
 
   .app-actions-list .btn {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
     font-size: var(--font-size-sm);
   }
 
@@ -1267,8 +1302,11 @@
   }
 
   .view-toggle-btn {
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+    min-width: 44px;
+    min-height: 44px;
   }
 }
 
@@ -1285,6 +1323,7 @@
   .transition-default();
   box-shadow: var(--box-shadow-sm);
   animation: fadeIn 0.5s ease;
+  touch-action: pan-y;
 
   &:hover {
     transform: translateX(5px);
@@ -1303,13 +1342,16 @@
 
 .drag-handle-list {
   color: rgba(255, 255, 255, 0.4);
-  cursor: move;
+  cursor: grab;
   font-size: var(--font-size-lg);
-  padding: 5px;
-  border-radius: 5px;
+  padding: 0;
+  border-radius: 10px;
+  min-width: 44px;
+  min-height: 44px;
+  touch-action: none;
   .transition-default();
   .flex-center();
-  width: 30px;
+  width: 44px;
   flex-shrink: 0;
 
   &:hover {
@@ -1465,6 +1507,57 @@
   padding: 4px 8px;
   border-radius: 5px;
   background: rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 576px) {
+  .app-list-item-inner {
+    display: grid;
+    grid-template-columns: 44px 45px minmax(0, 1fr);
+    grid-template-areas:
+      'handle icon actions'
+      'info info info';
+    align-items: center;
+    gap: 10px 12px;
+    padding: 12px;
+  }
+
+  .drag-handle-list {
+    grid-area: handle;
+  }
+
+  .app-icon-container-list {
+    grid-area: icon;
+  }
+
+  .app-info-list {
+    grid-area: info;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .app-name-row {
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .app-name-list,
+  .app-command-list,
+  .app-working-dir-list {
+    max-width: 100%;
+  }
+
+  .app-actions-list {
+    grid-area: actions;
+    justify-self: end;
+    margin-left: 0;
+  }
+
+  .app-actions-list .btn {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
 }
 
 // List drag states

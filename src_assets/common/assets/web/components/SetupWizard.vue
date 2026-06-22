@@ -217,6 +217,42 @@
                 {{ saveError }}
               </div>
 
+              <!-- 推荐服务 -->
+              <div class="promo-service-section mt-3">
+                <h5 class="mb-3">
+                  <i class="fas fa-bullhorn"></i>
+                  {{ $t('setup.featured_services') }}
+                </h5>
+                <div class="promo-service-links">
+                  <a class="resource-link resource-link-primary"
+                     href="https://www.alkaidlab.com/"
+                     target="_blank"
+                     rel="noopener noreferrer">
+                    <div class="resource-icon resource-logo-icon">
+                      <img src="/images/logo-alkaidlab.png" alt="AlkaidLab" class="resource-logo-image">
+                    </div>
+                    <div class="resource-content">
+                      <span class="resource-title">{{ $t('resource_card.official_website_title') }}</span>
+                      <span class="resource-desc">{{ $t('resource_card.official_website_desc') }}</span>
+                    </div>
+                    <i class="fas fa-external-link-alt resource-arrow"></i>
+                  </a>
+                  <a class="resource-link resource-link-moonlink"
+                     href="https://docs.qq.com/aio/DRFVhWERDaFhKd1ZE"
+                     target="_blank"
+                     rel="noopener noreferrer">
+                    <div class="resource-icon resource-logo-icon">
+                      <img src="/images/logo-natpierce.png" alt="皎月连" class="resource-logo-image">
+                    </div>
+                    <div class="resource-content">
+                      <span class="resource-title">{{ $t('resource_card.jiaoyuelian_title') }}</span>
+                      <span class="resource-desc">{{ $t('resource_card.jiaoyuelian_desc') }}</span>
+                    </div>
+                    <i class="fas fa-external-link-alt resource-arrow"></i>
+                  </a>
+                </div>
+              </div>
+
               <!-- 客户端下载 -->
               <div class="client-download-section mt-3">
                 <h5 class="mb-3">
@@ -1154,17 +1190,25 @@ export default {
   vertical-align: middle;
 }
 
-/* 客户端下载样式 */
-.client-download-section {
+/* 完成页资源区样式 */
+.client-download-section,
+.promo-service-section {
   background: var(--bs-secondary-bg);
   padding: 1em;
   border-radius: 10px;
 }
 
-.client-download-section h5 {
+.client-download-section h5,
+.promo-service-section h5 {
   font-size: 1em;
   margin-bottom: 0.8em;
   color: var(--bs-body-color);
+}
+
+.promo-service-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75em;
 }
 
 .client-download-layout {
@@ -1223,6 +1267,24 @@ export default {
   background: var(--icon-gradient);
 }
 
+.resource-logo-icon {
+  width: 86px;
+  height: 44px;
+  padding: 4px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  overflow: visible;
+}
+
+.resource-logo-image {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 0;
+}
+
 .resource-content {
   flex: 1;
   min-width: 0;
@@ -1271,6 +1333,16 @@ export default {
 .resource-link-harmony {
   --link-color: 206, 48, 48;
   --icon-gradient: linear-gradient(135deg, #ce3030 0%, #e74c3c 100%);
+}
+
+.resource-link-primary {
+  --link-color: 13, 110, 253;
+  --icon-gradient: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+}
+
+.resource-link-moonlink {
+  --link-color: 111, 66, 193;
+  --icon-gradient: linear-gradient(135deg, #6f42c1 0%, #4c2f8f 100%);
 }
 
 .qr-code-item {
@@ -1453,6 +1525,12 @@ export default {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+@media (max-width: 768px) {
+  .promo-service-links {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
 
