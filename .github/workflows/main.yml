@@ -1,4 +1,4 @@
-name: Build and Release
+name: Build Linux AMD64 and Release
 
 on:
   pull_request:
@@ -90,16 +90,16 @@ jobs:
         run: |
           SUFFIX=$([ "${{ github.ref_name }}" = "master" ] && echo "" || echo "-dev")
           echo "publish_release=false" >> $GITHUB_OUTPUT
-          echo "release_body=Manual build (${{ github.ref_name }})" >> $GITHUB_OUTPUT
+          echo "release_body=Manual Linux AMD64 build (${{ github.ref_name }})" >> $GITHUB_OUTPUT
           echo "release_commit=${{ github.sha }}" >> $GITHUB_OUTPUT
           echo "release_generate_release_notes=false" >> $GITHUB_OUTPUT
           echo "release_tag=manual-$(date +%Y%m%d-%H%M%S)${SUFFIX}" >> $GITHUB_OUTPUT
           echo "release_version=manual-$(date +%Y%m%d-%H%M%S)${SUFFIX}" >> $GITHUB_OUTPUT
 
-  build_win:
-    name: Windows
+  build_linux_amd64:
+    name: Linux AMD64
     needs: setup_release
-    runs-on: windows-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -107,178 +107,58 @@ jobs:
           ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.sha }}
           submodules: recursive
 
-      - name: Setup Dependencies Windows
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: ucrt64
-          update: true
-          install: >-
-            wget
-            curl
-
-      - name: Update Windows dependencies
-        env:
-          opus_version: '1.6.1-1'
-        shell: msys2 {0}
+      - name: Verify Linux AMD64 runner
+        shell: bash
         run: |
-          # download pinned opus version
-          opus_tarball="mingw-w64-ucrt-x86_64-opus-${opus_version}-any.pkg.tar.zst"
-          wget https://repo.msys2.org/mingw/ucrt64/${opus_tarball}
+          set -euo pipefail
+          test "$(uname -s)" = "Linux"
+          test "$(uname -m)" = "x86_64"
+          lsb_release -a
 
-          # install dependencies
-          # NOTE: gcc/gcc-libs were previously pinned to 15.1.0-5 to work around
-          # a broken upstream gcc 15.x. Since msys2 has moved on to gcc 16.x and
-          # other packages (cmake, etc.) now require gcc-libs 16.x ABI, pinning
-          # an old gcc-libs causes cmake.exe to silently fail to load (exit 127).
-          # Let pacman install the full toolchain at the current upstream version.
-          dependencies=(
-            "git"
-            "mingw-w64-ucrt-x86_64-cmake"
-            "mingw-w64-ucrt-x86_64-ninja"
-            "mingw-w64-ucrt-x86_64-cppwinrt"
-            "mingw-w64-ucrt-x86_64-curl-winssl"
-            "mingw-w64-ucrt-x86_64-graphviz"
-            "mingw-w64-ucrt-x86_64-MinHook"
-            "mingw-w64-ucrt-x86_64-miniupnpc"
-            "mingw-w64-ucrt-x86_64-nlohmann-json"
-            # "mingw-w64-ucrt-x86_64-nodejs"  # Replaced by actions/setup-node (vite 8 requires MSVC Node.js)
-            # "mingw-w64-ucrt-x86_64-nsis"  # Replaced by Inno Setup
-            "mingw-w64-ucrt-x86_64-onevpl"
-            "mingw-w64-ucrt-x86_64-openssl"
-            "mingw-w64-ucrt-x86_64-toolchain"
-            "mingw-w64-ucrt-x86_64-autotools"
-          )
-
-          pacman -Syu --noconfirm "${dependencies[@]}"
-
-          # install pinned opus after Syu to prevent upgrade
-          pacman --noconfirm -U ${opus_tarball}
-
-      - name: Verify Build Tools
-        shell: msys2 {0}
-        run: |
-          echo "Verifying build tools are installed..."
-          which cmake || (echo "cmake not found" && exit 1)
-          which ninja || (echo "ninja not found" && exit 1)
-          which gcc || (echo "gcc not found" && exit 1)
-          
-          echo "All build tools verified successfully"
-          echo "  CMake: $(cmake --version | head -1)"
-          echo "  Ninja: $(ninja --version)"
-          echo "  GCC: $(gcc --version | head -1)"
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Cache npm dependencies
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: npm-${{ hashFiles('package.json') }}
-
-      - name: Build Web UI
-        shell: pwsh
-        run: |
-          npm install
-          New-Item -ItemType Directory -Force -Path build | Out-Null
-          $env:SUNSHINE_SOURCE_ASSETS_DIR = "${{ github.workspace }}\src_assets"
-          $env:SUNSHINE_ASSETS_DIR = "${{ github.workspace }}\build"
-          npm run build
-
-      - name: Build Windows
-        shell: msys2 {0}
+      - name: Build Linux AMD64
+        shell: bash
         env:
           BRANCH: ${{ github.head_ref || github.ref_name }}
           BUILD_VERSION: ${{ needs.setup_release.outputs.release_tag }}.杂鱼
           COMMIT: ${{ needs.setup_release.outputs.release_commit }}
-          GITHUB_TOKEN: ${{ secrets.DRIVER_DOWNLOAD_TOKEN }}
-          # Fork PRs cannot access org-scoped secrets, so private-repo driver
-          # downloads (vmouse) may fail. Downgrade missing drivers from
-          # FATAL_ERROR to WARNING so the build/configure still succeeds; the
-          # affected drivers are simply excluded from the installer.
-          DRIVER_DEPS_REQUIRED: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) && 'OFF' || 'ON' }}
         run: |
-          mkdir -p build
-          cmake \
-            -B build \
-            -G Ninja \
-            -S . \
-            -DBUILD_DOCS=OFF \
-            -DBUILD_WEB_UI=OFF \
-            -DSUNSHINE_ASSETS_DIR=assets \
-            -DDRIVER_DEPS_REQUIRED=${DRIVER_DEPS_REQUIRED} \
-            -DSUNSHINE_PUBLISHER_NAME='${{ github.repository_owner }}' \
-            -DSUNSHINE_PUBLISHER_WEBSITE='https://github.com/AlkaidLab/foundation-sunshine' \
-            -DSUNSHINE_PUBLISHER_ISSUE_URL='https://github.com/AlkaidLab/foundation-sunshine/issues'
-          ninja -C build
+          chmod +x scripts/linux_build.sh
+          scripts/linux_build.sh \
+            --skip-cuda \
+            --publisher-name='${{ github.repository_owner }}' \
+            --publisher-website='https://github.com/AlkaidLab/foundation-sunshine' \
+            --publisher-issue-url='https://github.com/AlkaidLab/foundation-sunshine/issues'
 
-      - name: Cache Inno Setup
-        id: inno-cache
-        uses: actions/cache@v4
-        with:
-          path: C:\Program Files (x86)\Inno Setup 6
-          key: inno-setup-6
-
-      - name: Install Inno Setup
-        if: steps.inno-cache.outputs.cache-hit != 'true'
-        shell: pwsh
+      - name: Collect Linux AMD64 artifacts
+        shell: bash
         run: |
-          # Download and install Inno Setup 6 (silent install)
-          $url = "https://jrsoftware.org/download.php/is.exe"
-          $installer = "$env:TEMP\innosetup.exe"
-          Invoke-WebRequest -Uri $url -OutFile $installer
-          Start-Process -FilePath $installer -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-' -Wait
-
-      - name: Add Inno Setup to PATH
-        shell: pwsh
-        run: |
-          echo "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
-
-      - name: Package Windows
-        shell: msys2 {0}
-        run: |
+          set -euo pipefail
           mkdir -p artifacts
-          cd build
-
-          # package - 生成 Inno Setup 安装包和 ZIP 便携版
-          # 先安装到 staging 目录
-          cmake --install . --prefix ./inno_staging
-          
-          # 运行 Inno Setup 编译器
-          "/c/Program Files (x86)/Inno Setup 6/ISCC.exe" sunshine_installer.iss
-          
-          # 生成 ZIP 便携版
-          cpack -G ZIP --config ./CPackConfig.cmake --verbose
-
-          # move
-          mv ./cpack_artifacts/Sunshine.exe ../artifacts/sunshine-windows-installer.exe
-          mv ./cpack_artifacts/Sunshine.zip ../artifacts/sunshine-windows-portable.zip
+          shopt -s nullglob
+          packages=(build/cpack_artifacts/*.deb build/cpack_artifacts/*.tar.gz build/cpack_artifacts/*.zip build/cpack_artifacts/*.AppImage)
+          if [ ${#packages[@]} -eq 0 ]; then
+            echo "No Linux packages found in build/cpack_artifacts" >&2
+            exit 1
+          fi
+          for package in "${packages[@]}"; do
+            extension="${package##*.}"
+            if [[ "$package" == *.tar.gz ]]; then
+              extension="tar.gz"
+            fi
+            cp "$package" "artifacts/sunshine-linux-amd64.${extension}"
+          done
 
       - name: Generate Checksums
-        shell: pwsh
+        shell: bash
         run: |
-          # 生成 SHA256 校验和
-          .\scripts\generate-checksums.ps1 -Path .\artifacts -Output "SHA256SUMS.txt"
-
-      - name: Package Windows Debug Info
-        working-directory: build
-        run: |
-          # use .dbg file extension for binaries to avoid confusion with real packages
-          Get-ChildItem -File -Recurse | `
-            % { Rename-Item -Path $_.PSPath -NewName $_.Name.Replace(".exe",".dbg") }
-
-          # save the binaries with debug info
-          7z -r `
-            "-xr!CMakeFiles" `
-            "-xr!cpack_artifacts" `
-            a "../artifacts/sunshine-win32-debuginfo.7z" "*.dbg"
+          set -euo pipefail
+          cd artifacts
+          sha256sum * > SHA256SUMS.txt
 
       - name: Rename release assets
-        shell: msys2 {0}
+        shell: bash
         run: |
-          # Format tag to vYEAR.DATE where DATE is zero-padded to 4 digits
+          set -euo pipefail
           TAG="${{ needs.setup_release.outputs.release_tag }}"
           NEWTAG="$TAG"
 
@@ -289,19 +169,22 @@ jobs:
             NEWTAG="v${YEAR}.${DATE_PADDED}"
           fi
 
-          # 重命名安装包和便携版
-          mv artifacts/sunshine-windows-installer.exe "artifacts/Sunshine.${NEWTAG}.WindowsInstaller.exe"
-          mv artifacts/sunshine-windows-portable.zip "artifacts/Sunshine.${NEWTAG}.WindowsPortable.zip"
+          shopt -s nullglob
+          for artifact in artifacts/sunshine-linux-amd64.*; do
+            extension="${artifact##*.}"
+            if [[ "$artifact" == *.tar.gz ]]; then
+              extension="tar.gz"
+            fi
+            mv "$artifact" "artifacts/Sunshine.${NEWTAG}.LinuxAMD64.${extension}"
+          done
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: sunshine-windows-r${{ github.run_number }}
+          name: sunshine-linux-amd64-r${{ github.run_number }}
           path: |
-            artifacts/Sunshine.*.WindowsInstaller.exe
-            artifacts/Sunshine.*.WindowsPortable.zip
+            artifacts/Sunshine.*.LinuxAMD64.*
             artifacts/SHA256SUMS.txt
-            artifacts/checksums.json
           if-no-files-found: error
 
       - name: Create/Update GitHub Release
